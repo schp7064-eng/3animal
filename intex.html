@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>동물 도감 마스터 25 + 공통점·차이점 퀴즈</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Noto Sans KR',sans-serif;background:#f7fafc;color:#1f2937} 
+.card{transition:.18s transform,.18s box-shadow}.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(15,23,42,.15)}
+.badge{font-size:11px;font-weight:900;border-radius:999px;padding:4px 8px}
+.modal-bg{background:rgba(15,23,42,.78);backdrop-filter:blur(5px)}
+.progress-fill{transition:width .4s ease}
+.quiz-option:disabled{opacity:1}
+.img-frame{background:linear-gradient(135deg,#e0f2fe,#fef3c7)}
+</style>
+</head>
+<body>
+<header class="sticky top-0 z-20 bg-slate-900 text-white shadow-lg">
+  <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+    <div><p class="text-xs text-emerald-300 font-bold">초등 3학년 과학 · 동물의 생활</p><h1 class="text-2xl md:text-3xl font-black">🐾 동물 도감 마스터 25</h1><p class="text-slate-300 text-sm mt-1">동물을 관찰하고 퀴즈를 맞혀 도감 이미지를 획득해요.</p></div>
+    <div class="bg-slate-800 rounded-2xl p-3 min-w-[260px] border border-slate-700">
+      <div class="flex justify-between text-sm font-black mb-2"><span>내 도감 완성도</span><span id="progressText" class="text-emerald-300">0 / 25</span></div>
+      <div class="h-3 bg-slate-700 rounded-full overflow-hidden"><div id="progressBar" class="progress-fill h-full bg-emerald-400" style="width:0%"></div></div>
+      <button id="resetBtn" class="mt-2 text-xs text-slate-300 underline">등록 기록 지우기</button>
+      <button id="commonQuizBtn" class="hidden mt-3 w-full bg-amber-400 hover:bg-amber-300 text-slate-900 px-4 py-3 rounded-xl font-black shadow">🔍 공통점·차이점 퀴즈 열기</button>
+      <p id="commonQuizHint" class="mt-2 text-xs text-slate-400">도감 15개 이상 등록하면 추가 퀴즈가 열려요.</p>
+    </div>
+  </div>
+</header>
+<main class="max-w-6xl mx-auto px-4 py-6">
+  <section class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-6 text-sm md:text-base">
+    <b>도감 보기 약속</b> · 사진과 설명을 차분히 살펴보고, 생김새·사는 곳·움직임·환경에 살아가는 방법을 찾아봐요. 퀴즈 2개를 맞히면 카드가 도감에 등록됩니다.
+  </section>
+  <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
+</main>
+<div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-bg">
+  <div class="bg-white w-full max-w-3xl max-h-[92vh] overflow-hidden rounded-3xl shadow-2xl border-4 border-emerald-400 flex flex-col">
+    <div class="relative h-60 md:h-72 img-frame">
+      <img id="modalImg" class="w-full h-full object-cover" alt="동물 사진">
+      <button id="closeBtn" class="absolute top-4 right-4 bg-black/50 text-white rounded-full w-10 h-10 font-black">×</button>
+      <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-5 text-white">
+        <span id="statusBadge" class="badge bg-emerald-500">퀴즈 대기</span>
+        <h2 id="modalName" class="text-3xl font-black mt-2"></h2>
+      </div>
+    </div>
+    <div class="overflow-y-auto p-5 md:p-7">
+      <div id="studyArea" class="space-y-4"></div>
+      <div id="quizArea" class="hidden"></div>
+      <div id="successArea" class="hidden text-center py-10"><div class="text-7xl mb-4">🎉</div><h3 class="text-3xl font-black text-emerald-600">이미지 획득!</h3><p class="mt-2 text-gray-600 font-bold">도감에 등록되었어요.</p><button id="backBtn" class="mt-6 bg-slate-900 text-white px-6 py-3 rounded-xl font-black">도감으로 돌아가기</button></div>
+      <div id="commonQuizArea" class="hidden"></div>
+    </div>
+  </div>
+</div>
+<script>
+// 동물 데이터
+const animals = [{"id": "나비", "name": "나비", "category": "land", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Butterfly_macro_shot.jpg/640px-Butterfly_macro_shot.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Butterfly_July_2008-1.jpg/640px-Butterfly_July_2008-1.jpg"], "appearance": "몸은 머리, 가슴, 배로 나뉘고, 큰 날개와 더듬이, 가느다란 다리가 있습니다. 날개에는 여러 가지 무늬와 색이 있어요.", "habitat": "꽃밭이나 풀밭처럼 꽃이 많은 곳에서 볼 수 있습니다.", "adaptation": "날개로 꽃 사이를 날아다니며 꿀을 먹습니다. 더듬이는 주변을 느끼는 데 도움을 줍니다.", "hint": "날개가 있고 더듬이가 있어 곤충으로 분류할 수 있습니다.", "quizzes": [{"q": "나비의 몸에 있는 것은?", "options": ["지느러미", "날개와 더듬이", "등딱지"], "a": 1}, {"q": "나비가 자주 보이는 곳은?", "options": ["꽃밭", "깊은 바다", "눈밭"], "a": 0}]}, {"id": "토끼", "name": "토끼", "category": "land", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/European_Rabbit%2C_Bia%C5%82owie%C5%BCa_Forest.jpg/640px-European_Rabbit%2C_Bia%C5%82owie%C5%BCa_Forest.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Arctic_Hare.jpg/640px-Arctic_Hare.jpg"], "appearance": "긴 귀, 부드러운 털, 튼튼한 뒷다리가 있습니다. 앞니가 자라며 풀이나 잎을 갉아 먹습니다.", "habitat": "풀밭, 들판, 숲 가장자리에서 삽니다.", "adaptation": "큰 귀로 작은 소리를 잘 듣고, 튼튼한 뒷다리로 빠르게 뛰어 도망칩니다.", "hint": "털이 있고 네 다리로 움직이는 동물입니다.", "quizzes": [{"q": "토끼가 빠르게 움직일 수 있는 까닭은?", "options": ["튼튼한 뒷다리", "날개", "지느러미"], "a": 0}, {"q": "토끼의 귀는 어떤 특징이 있나요?", "options": ["짧고 없다", "길다", "껍데기다"], "a": 1}]}, {"id": "달팽이", "name": "달팽이", "category": "land", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Common_snail.jpg/640px-Common_snail.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Snail-WA.jpg/640px-Snail-WA.jpg"], "appearance": "부드러운 몸과 등에 얹은 단단한 껍데기가 있습니다. 머리에는 더듬이가 있고, 배처럼 넓은 발로 움직입니다.", "habitat": "축축한 화단, 그늘진 흙, 비가 온 뒤의 길가에서 볼 수 있습니다.", "adaptation": "몸이 마르지 않도록 축축한 곳에서 살고, 위험하면 껍데기 속으로 들어갑니다.", "hint": "다리는 없지만 기어서 이동하고, 껍데기나 몸을 보호합니다.", "quizzes": [{"q": "달팽이가 몸을 보호하는 것은?", "options": ["날개", "껍데기", "이빨"], "a": 1}, {"q": "달팽이가 좋아하는 곳은?", "options": ["축축한 곳", "아주 뜨거운 사막", "하늘"], "a": 0}]}, {"id": "뱀", "name": "뱀", "category": "land", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Grass_snake_%28Natrix_natrix%29_Pieniny.jpg/640px-Grass_snake_%28Natrix_natrix%29_Pieniny.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Natrix_natrix_%28Marek_Szczepanek%29.jpg/640px-Natrix_natrix_%28Marek_Szczepanek%29.jpg"], "appearance": "다리가 없고 길쭉한 몸이 비늘로 덮여 있습니다. 몸을 구부렸다 펴며 앞으로 나아갑니다.", "habitat": "풀숲, 숲, 산, 돌 틈처럼 몸을 숨기기 좋은 곳에서 삽니다.", "adaptation": "비늘이 땅과 몸 사이의 마찰을 도와 기어가기에 알맞습니다.", "hint": "다리가 없고 비늘이 있는 동물입니다.", "quizzes": [{"q": "뱀에게 없는 것은?", "options": ["다리", "비늘", "입"], "a": 0}, {"q": "뱀은 어떻게 이동하나요?", "options": ["기어서", "날아서", "네 다리로"], "a": 0}]}, {"id": "꿀벌", "name": "꿀벌", "category": "land", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Bee_on_Geraldton_Wax_Flower.JPG/640px-Bee_on_Geraldton_Wax_Flower.JPG", "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Apis_mellifera_Western_honey_bee.jpg/640px-Apis_mellifera_Western_honey_bee.jpg"], "appearance": "작은 몸에 날개와 더듬이, 여섯 개의 다리가 있습니다. 몸에는 꽃가루가 잘 붙는 털이 있습니다.", "habitat": "꽃이 많은 들판, 화단, 과수원에서 삽니다.", "adaptation": "꽃에서 꿀을 먹고, 다리와 몸의 털에 꽃가루를 묻혀 옮깁니다.", "hint": "날개와 더듬이가 있는 곤충이며, 꽃가루받이를 도와줍니다.", "quizzes": [{"q": "꿀벌의 다리는 몇 개인가요?", "options": ["4개", "6개", "10개"], "a": 1}, {"q": "꿀벌이 꽃에서 얻는 것은?", "options": ["꿀", "얼음", "모래"], "a": 0}]}, {"id": "무당벌레", "name": "무당벌레", "category": "land", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Asian_lady_beetle-%28Harmonia-axyridis%29.jpg/640px-Asian_lady_beetle-%28Harmonia-axyridis%29.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Coccinella_septempunctata_01.JPG/640px-Coccinella_septempunctata_01.JPG"], "appearance": "둥근 몸과 단단한 겉날개, 점무늬가 있습니다. 겉날개 아래에 날 수 있는 얇은 날개가 숨어 있습니다.", "habitat": "풀밭, 나뭇잎, 화단에서 볼 수 있습니다.", "adaptation": "단단한 겉날개는 몸을 보호하고, 위험할 때 날아서 이동할 수 있습니다.", "hint": "더듬이와 다리가 있고 날개가 있는 곤충입니다.", "quizzes": [{"q": "무당벌레 등에 흔히 있는 무늬는?", "options": ["점무늬", "줄무늬만", "글자"], "a": 0}, {"q": "무당벌레는 어떤 동물인가요?", "options": ["곤충", "어류", "새"], "a": 0}]}, {"id": "개미", "name": "개미", "category": "land", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Meat_eater_ant_feeding_on_honey02.jpg/640px-Meat_eater_ant_feeding_on_honey02.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Ant_on_leaf.jpg/640px-Ant_on_leaf.jpg"], "appearance": "작은 몸에 더듬이와 여섯 개의 다리가 있습니다. 여러 마리가 줄을 지어 움직이는 모습을 볼 수 있습니다.", "habitat": "땅 위, 흙 속, 돌 밑, 나무 주변에서 삽니다.", "adaptation": "더듬이로 냄새와 길을 알아보고, 힘을 모아 먹이를 옮깁니다.", "hint": "더듬이와 여섯 다리가 있는 곤충입니다.", "quizzes": [{"q": "개미의 다리는 몇 개인가요?", "options": ["2개", "6개", "8개"], "a": 1}, {"q": "개미가 냄새나 길을 알아보는 데 쓰는 것은?", "options": ["더듬이", "지느러미", "등딱지"], "a": 0}]}, {"id": "두더지", "name": "두더지", "category": "land", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/European_mole.jpg/640px-European_mole.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Talpa_europaea_MHNT.jpg/640px-Talpa_europaea_MHNT.jpg"], "appearance": "작은 눈, 부드러운 털, 넓은 앞발과 강한 발톱이 있습니다. 앞발은 땅을 파기 좋습니다.", "habitat": "깜깜한 땅속 굴에서 삽니다.", "adaptation": "넓은 앞발로 흙을 밀어내며 굴을 파고, 냄새를 맡아 먹이를 찾습니다.", "hint": "네 다리가 있고 땅속 생활에 알맞은 몸을 가졌습니다.", "quizzes": [{"q": "두더지가 굴을 팔 때 주로 쓰는 것은?", "options": ["앞발", "날개", "꼬리"], "a": 0}, {"q": "두더지가 사는 곳은?", "options": ["땅속", "하늘", "바다 위"], "a": 0}]}, {"id": "지렁이", "name": "지렁이", "category": "land", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Regenwurm1.jpg/640px-Regenwurm1.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Earthworm.jpg/640px-Earthworm.jpg"], "appearance": "길고 부드러운 몸에 많은 마디가 있습니다. 다리와 날개는 없습니다.", "habitat": "축축한 흙 속이나 낙엽이 쌓인 곳에서 삽니다.", "adaptation": "몸을 늘였다 줄이며 흙 속을 기어 다니고, 흙을 부드럽게 만드는 데 도움을 줍니다.", "hint": "다리가 없고 기어서 움직이는 동물입니다.", "quizzes": [{"q": "지렁이에게 없는 것은?", "options": ["다리", "마디", "몸"], "a": 0}, {"q": "지렁이가 사는 곳으로 알맞은 곳은?", "options": ["축축한 흙", "뜨거운 모래 위", "하늘"], "a": 0}]}, {"id": "붕어", "name": "붕어", "category": "water", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/CarassiusCarassius8.JPG/640px-CarassiusCarassius8.JPG", "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Carassius_auratus.jpg/640px-Carassius_auratus.jpg"], "appearance": "비늘로 덮인 몸, 지느러미, 아가미가 있습니다. 몸은 물속에서 헤엄치기 좋은 모양입니다.", "habitat": "연못, 강, 호수 같은 민물에서 삽니다.", "adaptation": "아가미로 물속에서 숨 쉬고, 지느러미로 방향을 바꾸며 헤엄칩니다.", "hint": "지느러미가 있고 물에서 사는 물고기입니다.", "quizzes": [{"q": "붕어가 헤엄칠 때 쓰는 것은?", "options": ["지느러미", "날개", "더듬이"], "a": 0}, {"q": "붕어가 숨 쉬는 곳은?", "options": ["아가미", "귀", "발"], "a": 0}]}, {"id": "미꾸라지", "name": "미꾸라지", "category": "water", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Misgurnus_anguillicaudatus.jpg/640px-Misgurnus_anguillicaudatus.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Misgurnus_anguillicaudatus_1.jpg/640px-Misgurnus_anguillicaudatus_1.jpg"], "appearance": "길쭉하고 미끄러운 몸과 입 주변의 수염이 있습니다. 몸이 가늘어 진흙 속에도 잘 들어갑니다.", "habitat": "논, 얕은 냇가, 진흙이 있는 민물에서 삽니다.", "adaptation": "미끄러운 몸으로 진흙 속에 숨고, 수염으로 먹이를 찾습니다.", "hint": "지느러미가 있고 물에서 사는 물고기입니다.", "quizzes": [{"q": "미꾸라지의 몸 느낌은?", "options": ["미끌미끌", "까칠까칠", "털북숭이"], "a": 0}, {"q": "입 주변에 있는 것은?", "options": ["수염", "뿔", "날개"], "a": 0}]}, {"id": "개구리", "name": "개구리", "category": "amphibian", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/5/58/Dark-spotted_Frog_%28Pelophylax_nigromaculatus%29.jpg/640px-Dark-spotted_Frog_%28Pelophylax_nigromaculatus%29.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Rana_nigromaculata.jpg/640px-Rana_nigromaculata.jpg"], "appearance": "축축한 피부, 튼튼한 뒷다리, 발가락 사이의 물갈퀴가 있습니다. 어릴 때는 올챙이로 물에서 삽니다.", "habitat": "연못, 논, 물가와 그 주변 땅에서 삽니다.", "adaptation": "뒷다리로 멀리 뛰고, 물갈퀴가 있어 물속에서도 잘 헤엄칩니다.", "hint": "물과 땅을 오가며 사는 동물입니다.", "quizzes": [{"q": "개구리가 멀리 뛰는 데 도움 되는 것은?", "options": ["튼튼한 뒷다리", "날개", "등딱지"], "a": 0}, {"q": "올챙이는 주로 어디서 살까요?", "options": ["물속", "사막", "나무 꼭대기"], "a": 0}]}, {"id": "수달", "name": "수달", "category": "water", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Fischotter_Lutra_lutra1.jpg/640px-Fischotter_Lutra_lutra1.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Lutra_lutra_2.jpg/640px-Lutra_lutra_2.jpg"], "appearance": "길쭉한 몸, 물갈퀴가 있는 발, 빽빽한 털이 있습니다. 꼬리도 헤엄칠 때 도움이 됩니다.", "habitat": "강가, 호숫가, 물이 깨끗한 하천 주변에서 삽니다.", "adaptation": "물갈퀴 발로 헤엄치고, 빽빽한 털이 몸을 따뜻하게 지켜줍니다.", "hint": "다리가 있고 물에서도 잘 사는 포유동물입니다.", "quizzes": [{"q": "수달이 헤엄칠 때 도움 되는 것은?", "options": ["물갈퀴", "날개", "더듬이"], "a": 0}, {"q": "수달의 몸을 따뜻하게 지켜주는 것은?", "options": ["빽빽한 털", "비늘", "딱딱한 껍질"], "a": 0}]}, {"id": "돌고래", "name": "돌고래", "category": "sea", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Tursiops_truncatus_01.jpg/640px-Tursiops_truncatus_01.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Tursiops_truncatus_01-cropped.jpg/640px-Tursiops_truncatus_01-cropped.jpg"], "appearance": "매끈한 몸, 지느러미, 꼬리지느러미가 있습니다. 머리 위의 숨구멍으로 숨을 쉽니다.", "habitat": "넓은 바다에서 무리를 지어 삽니다.", "adaptation": "꼬리를 위아래로 움직여 빠르게 헤엄치고, 물 위로 올라와 공기를 마십니다.", "hint": "지느러미가 있지만 새끼를 낳아 기르는 포유동물입니다.", "quizzes": [{"q": "돌고래는 어디에서 숨을 쉬나요?", "options": ["물 위 공기", "모래 속", "나무 구멍"], "a": 0}, {"q": "돌고래가 헤엄칠 때 쓰는 것은?", "options": ["꼬리와 지느러미", "더듬이", "발굽"], "a": 0}]}, {"id": "오징어", "name": "오징어", "category": "sea", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Loligo_vulgaris.jpg/640px-Loligo_vulgaris.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Squid_komodo.jpg/640px-Squid_komodo.jpg"], "appearance": "부드러운 몸, 긴 팔, 빨판이 있습니다. 위험할 때 먹물을 뿜기도 합니다.", "habitat": "바다 물속에서 삽니다.", "adaptation": "몸속의 물을 세게 뿜어 빠르게 움직이고, 팔의 빨판으로 먹이를 붙잡습니다.", "hint": "다리처럼 보이는 팔이 많고, 뼈가 단단하지 않은 동물입니다.", "quizzes": [{"q": "오징어가 위험할 때 뿜는 것은?", "options": ["먹물", "모래", "털"], "a": 0}, {"q": "먹이를 붙잡는 데 도움 되는 것은?", "options": ["빨판", "뿔", "발굽"], "a": 0}]}, {"id": "꽃게", "name": "꽃게", "category": "sea", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Portunus_trituberculatus.jpg/640px-Portunus_trituberculatus.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Portunus_trituberculatus_2014-06-08.jpg/640px-Portunus_trituberculatus_2014-06-08.jpg"], "appearance": "납작한 몸, 단단한 등딱지, 큰 집게발이 있습니다. 다리가 여러 개 있고 옆으로 걷습니다.", "habitat": "바다와 갯벌, 모래 바닥에서 삽니다.", "adaptation": "단단한 껍질로 몸을 보호하고, 집게발로 먹이를 잡거나 자신을 지킵니다.", "hint": "다리가 있고 물에서 사는 동물이며, 딱딱한 껍질이 있습니다.", "quizzes": [{"q": "꽃게가 몸을 보호하는 것은?", "options": ["단단한 등딱지", "깃털", "긴 귀"], "a": 0}, {"q": "꽃게의 큰 발은 무엇인가요?", "options": ["집게발", "물갈퀴", "더듬이"], "a": 0}]}, {"id": "가오리", "name": "가오리", "category": "sea", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Stingray.jpg/640px-Stingray.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/Dasyatis_pastinaca.jpg/640px-Dasyatis_pastinaca.jpg"], "appearance": "넓고 납작한 몸과 양쪽으로 펼쳐진 지느러미가 있습니다. 긴 꼬리를 가진 종류도 있습니다.", "habitat": "바다 바닥 가까이에서 삽니다.", "adaptation": "넓은 지느러미를 물결치듯 움직여 헤엄치고, 모래 위에 몸을 숨기기도 합니다.", "hint": "지느러미가 있고 바다에서 사는 물고기입니다.", "quizzes": [{"q": "가오리 몸의 모양은?", "options": ["넓고 납작하다", "둥근 공 같다", "털이 많다"], "a": 0}, {"q": "가오리는 주로 어디에서 살까요?", "options": ["바다", "사막", "나무 위"], "a": 0}]}, {"id": "바다거북", "name": "바다거북", "category": "sea", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Hawaii_turtle_2.JPG/640px-Hawaii_turtle_2.JPG", "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Green_Sea_Turtle_grazing_seagrass.jpg/640px-Green_Sea_Turtle_grazing_seagrass.jpg"], "appearance": "단단한 등딱지와 넓은 앞다리가 있습니다. 앞다리는 물속에서 노처럼 움직입니다.", "habitat": "바다에서 살고, 알을 낳을 때는 모래 해변으로 올라옵니다.", "adaptation": "넓은 앞다리로 천천히 헤엄치고, 등딱지가 몸을 보호합니다.", "hint": "다리가 있고 바다에서 사는 파충류입니다.", "quizzes": [{"q": "바다거북의 몸을 보호하는 것은?", "options": ["등딱지", "날개", "더듬이"], "a": 0}, {"q": "바다거북이 헤엄칠 때 쓰는 것은?", "options": ["넓은 앞다리", "뿔", "귀"], "a": 0}]}, {"id": "해마", "name": "해마", "category": "sea", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/Hippocampus_hippocampus_%28on_Ascophyllum_nodosum%29.jpg/640px-Hippocampus_hippocampus_%28on_Ascophyllum_nodosum%29.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Hippocampus_erectus_%28line_seahorse%29.jpg/640px-Hippocampus_erectus_%28line_seahorse%29.jpg"], "appearance": "말처럼 생긴 머리, 작은 지느러미, 말린 꼬리가 있습니다. 몸은 작고 곧게 서서 헤엄칩니다.", "habitat": "바다의 해조류나 산호 주변에서 삽니다.", "adaptation": "꼬리로 해조류를 붙잡고, 작은 지느러미를 빠르게 움직여 천천히 이동합니다.", "hint": "지느러미가 있는 작은 물고기입니다.", "quizzes": [{"q": "해마의 머리는 무엇과 닮았나요?", "options": ["말", "토끼", "개미"], "a": 0}, {"q": "해마가 해조류를 붙잡을 때 쓰는 것은?", "options": ["꼬리", "날개", "발굽"], "a": 0}]}, {"id": "북극곰", "name": "북극곰", "category": "special", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Polarb%C3%A4r_12_2004-11-17.jpg/640px-Polarb%C3%A4r_12_2004-11-17.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Polar_Bear_-_Alaska.jpg/640px-Polar_Bear_-_Alaska.jpg"], "appearance": "하얀 털, 두꺼운 지방층, 넓은 발이 있습니다. 몸집이 크고 힘이 센 동물입니다.", "habitat": "얼음이 많은 북극 주변에서 삽니다.", "adaptation": "두꺼운 털과 지방이 추위를 막고, 넓은 발은 얼음 위를 걷거나 헤엄치는 데 도움을 줍니다.", "hint": "털이 있고 네 다리로 걷는 포유동물입니다.", "quizzes": [{"q": "북극곰이 추위를 견디는 데 도움 되는 것은?", "options": ["두꺼운 털과 지방", "얇은 날개", "더듬이"], "a": 0}, {"q": "북극곰 털 색은?", "options": ["하얀색", "초록색", "빨간색"], "a": 0}]}, {"id": "하프물범", "name": "하프물범", "category": "special", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Harp_seal_pup.jpg/640px-Harp_seal_pup.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Harp_seal.jpg/640px-Harp_seal.jpg"], "appearance": "매끈한 몸과 지느러미 모양의 앞발이 있습니다. 새끼는 하얀 솜털을 가지고 있습니다.", "habitat": "차가운 북극 바다와 얼음 위에서 삽니다.", "adaptation": "지느러미 모양 발로 헤엄치고, 두꺼운 지방이 차가운 물에서 몸을 보호합니다.", "hint": "다리 대신 지느러미처럼 생긴 발이 있고, 물과 얼음 위를 오갑니다.", "quizzes": [{"q": "하프물범 새끼의 털은 어떤 색인가요?", "options": ["하얀색", "검은색", "초록색"], "a": 0}, {"q": "하프물범이 헤엄치는 데 쓰는 것은?", "options": ["지느러미 모양 발", "더듬이", "뿔"], "a": 0}]}, {"id": "순록", "name": "순록", "category": "special", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Reindeer_in_Svalbard.jpg/640px-Reindeer_in_Svalbard.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Reindeer_in_Lapland.jpg/640px-Reindeer_in_Lapland.jpg"], "appearance": "큰 뿔, 두꺼운 털, 넓은 발굽이 있습니다. 추운 곳을 걸어 다니기에 알맞습니다.", "habitat": "눈이 많이 오는 추운 지역에서 삽니다.", "adaptation": "넓은 발굽은 눈밭에 깊게 빠지지 않게 도와주고, 두꺼운 털은 몸을 따뜻하게 합니다.", "hint": "네 다리가 있고 뿔과 발굽이 있는 동물입니다.", "quizzes": [{"q": "순록의 넓은 발굽은 무엇을 도와주나요?", "options": ["눈밭 걷기", "하늘 날기", "물속 숨쉬기"], "a": 0}, {"q": "순록 머리에 있는 것은?", "options": ["뿔", "더듬이", "지느러미"], "a": 0}]}, {"id": "낙타", "name": "낙타", "category": "special", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/07._Camel_Profile%2C_near_Silverton%2C_NSW%2C_07.07.2007.jpg/640px-07._Camel_Profile%2C_near_Silverton%2C_NSW%2C_07.07.2007.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Camelus_dromedarius_in_Morocco.jpg/640px-Camelus_dromedarius_in_Morocco.jpg"], "appearance": "등에 혹이 있고, 긴 다리와 긴 속눈썹, 넓은 발바닥이 있습니다.", "habitat": "뜨겁고 건조한 사막에서 삽니다.", "adaptation": "혹에는 물이 아니라 영양분이 저장되어 오래 버티는 데 도움을 줍니다. 넓은 발바닥은 모래에 덜 빠지게 합니다.", "hint": "네 다리로 걷고 사막 생활에 알맞은 몸을 가졌습니다.", "quizzes": [{"q": "낙타 등에 있는 것은?", "options": ["혹", "날개", "등딱지"], "a": 0}, {"q": "낙타 발바닥이 넓은 까닭은?", "options": ["모래에 덜 빠지려고", "하늘을 날려고", "물속에서 숨 쉬려고"], "a": 0}]}, {"id": "사막전갈", "name": "사막전갈", "category": "special", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Scorpion_in_the_Negev.jpg/640px-Scorpion_in_the_Negev.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Scorpion_Photograph_By_Shantanu_Kuveskar.jpg/640px-Scorpion_Photograph_By_Shantanu_Kuveskar.jpg"], "appearance": "단단한 껍질, 집게, 꼬리 끝의 독침이 있습니다. 다리가 여러 개입니다.", "habitat": "사막의 모래, 바위 밑, 건조한 곳에서 삽니다.", "adaptation": "낮에는 뜨거운 햇빛을 피해 숨어 있다가 밤에 움직입니다. 단단한 껍질은 몸의 물이 마르는 것을 줄여줍니다.", "hint": "날개는 없고 다리가 있으며, 사막에서 사는 작은 동물입니다.", "quizzes": [{"q": "사막전갈 꼬리 끝에 있는 것은?", "options": ["독침", "깃털", "물갈퀴"], "a": 0}, {"q": "사막전갈은 주로 어디에 사나요?", "options": ["사막", "얼음 위", "깊은 바다"], "a": 0}]}, {"id": "사막여우", "name": "사막여우", "category": "special", "images": ["https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Fennec_Fox.jpg/640px-Fennec_Fox.jpg", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Fennec_Fox_Vulpes_zerda.jpg/640px-Fennec_Fox_Vulpes_zerda.jpg"], "appearance": "작은 몸, 아주 큰 귀, 털 많은 발바닥이 있습니다. 몸빛은 모래와 비슷합니다.", "habitat": "뜨겁고 건조한 사막에서 삽니다.", "adaptation": "큰 귀는 몸의 열을 내보내는 데 도움을 주고, 발바닥 털은 뜨거운 모래 위를 걷게 해줍니다.", "hint": "털이 있고 네 다리로 걷는 사막 동물입니다.", "quizzes": [{"q": "사막여우의 가장 눈에 띄는 특징은?", "options": ["큰 귀", "지느러미", "등딱지"], "a": 0}, {"q": "발바닥 털은 무엇을 도와주나요?", "options": ["뜨거운 모래 걷기", "물속 숨쉬기", "날기"], "a": 0}]}];
+
+const placeholder = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='800' height='500'><rect width='100%' height='100%' fill='#e2e8f0'/><text x='50%' y='46%' text-anchor='middle' font-size='34' font-family='sans-serif' fill='#334155'>사진을 불러오지 못했어요</text><text x='50%' y='58%' text-anchor='middle' font-size='22' font-family='sans-serif' fill='#64748b'>다른 인터넷 환경에서 다시 열어보세요</text></svg>`);
+const key='animal-dogam-collected-v3';
+let collected = new Set(JSON.parse(localStorage.getItem(key)||'[]'));
+let current=null, qi=0;
+let commonQi=0, commonScore=0;
+const commonQuizzes = [
+  {q:"나비와 꿀벌의 공통점으로 알맞은 것은?", options:["둘 다 날개와 더듬이가 있는 곤충이다","둘 다 바다에서 산다","둘 다 등딱지가 있다"], a:0, explain:"나비와 꿀벌은 모두 곤충이고, 날개와 더듬이가 있어요."},
+  {q:"붕어와 돌고래의 차이점으로 알맞은 것은?", options:["붕어는 아가미로 숨 쉬고, 돌고래는 물 위 공기를 마신다","둘 다 땅속에서 산다","돌고래는 곤충이다"], a:0, explain:"붕어는 물고기라 아가미로 숨 쉬고, 돌고래는 포유동물이라 물 위로 올라와 숨을 쉬어요."},
+  {q:"토끼와 두더지의 공통점은?", options:["네 다리가 있고 털이 있다","지느러미가 있다","몸이 비늘로 덮여 있다"], a:0, explain:"토끼와 두더지는 모두 털이 있고 네 다리로 움직이는 동물이에요."},
+  {q:"달팽이와 바다거북의 공통점으로 가장 알맞은 것은?", options:["몸을 보호하는 단단한 부분이 있다","둘 다 날개가 있다","둘 다 더듬이로 날아간다"], a:0, explain:"달팽이는 껍데기, 바다거북은 등딱지가 몸을 보호해요."},
+  {q:"낙타와 사막여우의 공통점은?", options:["사막 환경에 알맞은 몸의 특징이 있다","북극 얼음 위에서 산다","물속에서 아가미로 숨 쉰다"], a:0, explain:"낙타와 사막여우는 뜨겁고 건조한 사막에서 살아가기 알맞은 특징이 있어요."},
+  {q:"개구리와 수달의 차이점으로 알맞은 것은?", options:["개구리는 물과 땅을 오가고, 수달은 포유동물이다","둘 다 날개로 난다","수달은 곤충이다"], a:0, explain:"개구리는 양서류이고, 수달은 털과 다리가 있는 포유동물이에요."},
+  {q:"꽃게와 사막전갈의 공통점은?", options:["단단한 껍질이나 집게처럼 몸을 보호하거나 먹이를 잡는 구조가 있다","둘 다 깃털이 있다","둘 다 부리로 먹이를 먹는다"], a:0, explain:"꽃게와 사막전갈은 단단한 몸 구조와 집게가 있어요."},
+  {q:"북극곰과 하프물범의 공통점은?", options:["추운 곳에서 살기 알맞은 몸의 특징이 있다","둘 다 사막에서 산다","둘 다 물고기다"], a:0, explain:"북극곰과 하프물범은 추운 환경에서 몸을 보호하는 털이나 지방층 같은 특징이 있어요."},
+  {q:"오징어와 해마의 공통점은?", options:["바다에 산다","넓은 발굽이 있다","땅속 굴을 판다"], a:0, explain:"오징어와 해마는 모두 바다에서 사는 동물이에요."},
+  {q:"뱀과 지렁이의 공통점으로 알맞은 것은?", options:["다리가 없고 기어서 움직인다","둘 다 날개가 있다","둘 다 큰 귀가 있다"], a:0, explain:"뱀과 지렁이는 다리가 없고 몸을 이용해 기어 움직여요."}
+];
+const $=s=>document.querySelector(s);
+
+// 이미지 로딩 로직: 직접 URL → Wikimedia 리다이렉트 → 이미지 프록시 순서로 시도합니다.
+// 기존에는 프록시에 전체 https:// 주소를 그대로 넣어서 일부 이미지가 실패했습니다.
+function getCommonsFileName(url){
+  try{
+    const decoded = decodeURIComponent(url);
+    let match = decoded.match(/\/commons\/thumb\/[^/]+\/[^/]+\/([^/]+)\//);
+    if(match) return match[1];
+    match = decoded.match(/\/commons\/[^/]+\/[^/]+\/([^?#]+)/);
+    if(match) return match[1];
+  }catch(e){}
+  return null;
+}
+
+function buildImageCandidates(animal){
+  const candidates = [];
+  (animal.images || []).forEach(rawUrl => {
+    if(!rawUrl) return;
+    const url = rawUrl.trim();
+    const noProtocol = url.replace(/^https?:\/\//, "");
+    const fileName = getCommonsFileName(url);
+
+    // 1) 원본 위키미디어 썸네일 직접 표시
+    candidates.push(url);
+
+    // 2) 파일명 기반 Wikimedia 리다이렉트. 썸네일 경로가 깨져도 새 썸네일을 받아올 수 있음
+    if(fileName){
+      candidates.push(`https://commons.wikimedia.org/wiki/Special:Redirect/file/${encodeURIComponent(fileName)}?width=640`);
+    }
+
+    // 3) weserv 프록시. 프로토콜을 뺀 주소를 넣어야 안정적으로 작동함
+    candidates.push(`https://images.weserv.nl/?url=${encodeURIComponent(noProtocol)}&w=640&h=420&fit=cover&output=jpg`);
+  });
+  return [...new Set(candidates)];
+}
+
+function setSmartImage(img, animal){
+  const candidates = buildImageCandidates(animal);
+  let index = 0;
+  img.alt = `${animal.name} 사진`;
+  img.loading = "lazy";
+  img.referrerPolicy = "no-referrer";
+
+  function tryNext(){
+    if(index >= candidates.length){
+      img.onerror = null;
+      img.src = placeholder;
+      return;
+    }
+    img.src = candidates[index++];
+  }
+
+  img.onerror = tryNext;
+  img.onload = () => {
+    if(img.naturalWidth < 20 || img.naturalHeight < 20) tryNext();
+  };
+  tryNext();
+}
+
+function save(){localStorage.setItem(key, JSON.stringify([...collected]));}
+function updateProgress(){
+  $('#progressText').textContent=`${collected.size} / ${animals.length}`;
+  $('#progressBar').style.width=(collected.size/animals.length*100)+'%';
+  const unlocked = collected.size >= 15;
+  const btn = $('#commonQuizBtn');
+  const hint = $('#commonQuizHint');
+  if(btn){ btn.classList.toggle('hidden', !unlocked); }
+  if(hint){ hint.textContent = unlocked ? '추가 퀴즈가 열렸어요! 동물들의 공통점과 차이점을 비교해 봐요.' : `도감 ${15-collected.size}개를 더 등록하면 추가 퀴즈가 열려요.`; }
+}
+function renderGrid(){
+  const grid=$('#grid'); grid.innerHTML='';
+  animals.forEach(a=>{
+    const got=collected.has(a.id);
+    const card=document.createElement('button'); card.className='card text-left bg-white rounded-2xl overflow-hidden border-2 '+(got?'border-yellow-400':'border-slate-200')+' shadow-sm';
+    card.innerHTML=`<div class='h-36 md:h-40 img-frame relative'><img class='w-full h-full object-cover' alt='${a.name} 사진'><div class='absolute top-2 right-2'>${got?"<span class='badge bg-yellow-300 text-yellow-900'>획득 🌟</span>":"<span class='badge bg-slate-100 text-slate-700'>퀴즈 대기</span>"}</div></div><div class='p-3'><h3 class='font-black text-lg'>${a.name}</h3><p class='text-xs text-gray-500 mt-1'>클릭해서 관찰하기</p></div>`;
+    setSmartImage(card.querySelector('img'),a); card.onclick=()=>openAnimal(a); grid.appendChild(card);
+  }); updateProgress();
+}
+function openAnimal(a){current=a; qi=0; $('#modal').classList.remove('hidden'); $('#modal').classList.add('flex'); document.body.style.overflow='hidden'; $('#modalName').textContent=a.name; setSmartImage($('#modalImg'),a); renderStudy();}
+function closeModal(){$('#modal').classList.add('hidden'); $('#modal').classList.remove('flex'); document.body.style.overflow='auto'; renderGrid();}
+function renderStudy(){
+  const got=collected.has(current.id); $('#statusBadge').textContent=got?'도감 등록 완료 🌟':'퀴즈 대기'; $('#statusBadge').className='badge '+(got?'bg-yellow-300 text-yellow-900':'bg-emerald-500 text-white');
+  $('#quizArea').classList.add('hidden'); $('#successArea').classList.add('hidden'); $('#commonQuizArea').classList.add('hidden'); $('#studyArea').classList.remove('hidden');
+  $('#studyArea').innerHTML=`
+  <div class='grid md:grid-cols-2 gap-4'>
+    <section class='bg-blue-50 border-l-4 border-blue-400 rounded-2xl p-4'><h4 class='font-black text-blue-800 mb-2'>👁️ 생김새</h4><p class='leading-relaxed'>${current.appearance}</p></section>
+    <section class='bg-green-50 border-l-4 border-green-400 rounded-2xl p-4'><h4 class='font-black text-green-800 mb-2'>🏡 사는 곳</h4><p class='leading-relaxed'>${current.habitat}</p></section>
+    <section class='bg-amber-50 border-l-4 border-amber-400 rounded-2xl p-4'><h4 class='font-black text-amber-800 mb-2'>🌟 환경에 살아가는 방법</h4><p class='leading-relaxed'>${current.adaptation}</p></section>
+    <section class='bg-purple-50 border-l-4 border-purple-400 rounded-2xl p-4'><h4 class='font-black text-purple-800 mb-2'>🧩 특징과 분류 힌트</h4><p class='leading-relaxed'>${current.hint}</p></section>
+  </div>
+  <div class='text-center pt-4'><button onclick='startQuiz()' class='bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black shadow-lg'>🎯 퀴즈 풀고 이미지 획득하기</button></div>`;
+}
+function startQuiz(){qi=0; $('#studyArea').classList.add('hidden'); $('#quizArea').classList.remove('hidden'); renderQuiz();}
+function renderQuiz(){
+ const q=current.quizzes[qi]; $('#quizArea').innerHTML=`<p class='text-center text-sm font-black text-emerald-600'>${qi+1} / ${current.quizzes.length}</p><h3 class='text-2xl font-black text-center my-5 break-keep'>${q.q}</h3><div class='space-y-3'>${q.options.map((o,i)=>`<button class='quiz-option w-full text-left bg-white border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-4 font-bold' onclick='answer(${i}, this)'><span class='inline-flex w-8 h-8 rounded-full bg-slate-100 items-center justify-center mr-3 font-black'>${i+1}</span>${o}</button>`).join('')}</div><p id='feedback' class='text-center mt-5 h-7 font-black'></p><button onclick='renderStudy()' class='mt-3 text-sm underline text-gray-500'>설명 다시 보기</button>`;
+}
+function answer(i,btn){
+ const q=current.quizzes[qi]; document.querySelectorAll('.quiz-option').forEach(b=>b.disabled=true);
+ if(i===q.a){btn.classList.add('bg-emerald-100','border-emerald-500','text-emerald-800'); $('#feedback').textContent='정답이에요! ⭕'; $('#feedback').className='text-center mt-5 h-7 font-black text-emerald-600'; setTimeout(()=>{qi++; if(qi<current.quizzes.length) renderQuiz(); else success();},800);}
+ else {btn.classList.add('bg-rose-100','border-rose-500','text-rose-700'); $('#feedback').textContent='아쉬워요. 설명을 다시 살펴봐요!'; $('#feedback').className='text-center mt-5 h-7 font-black text-rose-600'; setTimeout(renderStudy,1200);}
+}
+function success(){collected.add(current.id); save(); $('#quizArea').classList.add('hidden'); $('#successArea').classList.remove('hidden'); updateProgress();}
+function openCommonQuiz(){
+  if(collected.size < 15){ alert('도감을 15개 이상 등록하면 열려요!'); return; }
+  commonQi = 0; commonScore = 0;
+  $('#modal').classList.remove('hidden'); $('#modal').classList.add('flex'); document.body.style.overflow='hidden';
+  $('#modalName').textContent='공통점·차이점 퀴즈';
+  $('#modalImg').src = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='900' height='500'><rect width='100%' height='100%' fill='#fef3c7'/><text x='50%' y='42%' text-anchor='middle' font-size='46' font-family='sans-serif' fill='#92400e'>공통점 · 차이점 퀴즈</text><text x='50%' y='58%' text-anchor='middle' font-size='26' font-family='sans-serif' fill='#78350f'>동물들의 특징을 비교해 봐요</text></svg>`);
+  $('#statusBadge').textContent='추가 퀴즈'; $('#statusBadge').className='badge bg-amber-400 text-amber-950';
+  $('#studyArea').classList.add('hidden'); $('#quizArea').classList.add('hidden'); $('#successArea').classList.add('hidden');
+  $('#commonQuizArea').classList.remove('hidden');
+  renderCommonQuiz();
+}
+function renderCommonQuiz(){
+  const q = commonQuizzes[commonQi];
+  $('#commonQuizArea').innerHTML = `<p class='text-center text-sm font-black text-amber-600'>${commonQi+1} / ${commonQuizzes.length}</p><h3 class='text-2xl font-black text-center my-5 break-keep'>${q.q}</h3><div class='space-y-3'>${q.options.map((o,i)=>`<button class='common-option w-full text-left bg-white border-2 border-slate-200 hover:border-amber-400 rounded-2xl p-4 font-bold' onclick='answerCommon(${i}, this)'><span class='inline-flex w-8 h-8 rounded-full bg-slate-100 items-center justify-center mr-3 font-black'>${i+1}</span>${o}</button>`).join('')}</div><p id='commonFeedback' class='text-center mt-5 min-h-12 font-black'></p><button onclick='closeModal()' class='mt-5 text-sm underline text-gray-500'>도감으로 돌아가기</button>`;
+}
+function answerCommon(i, btn){
+  const q = commonQuizzes[commonQi];
+  document.querySelectorAll('.common-option').forEach(b=>b.disabled=true);
+  if(i === q.a){
+    commonScore++;
+    btn.classList.add('bg-emerald-100','border-emerald-500','text-emerald-800');
+    $('#commonFeedback').innerHTML = `정답이에요! ⭕<br><span class='text-sm text-gray-600'>${q.explain}</span>`;
+    $('#commonFeedback').className='text-center mt-5 min-h-12 font-black text-emerald-600';
+  }else{
+    btn.classList.add('bg-rose-100','border-rose-500','text-rose-700');
+    const buttons = document.querySelectorAll('.common-option');
+    buttons[q.a].classList.add('bg-emerald-100','border-emerald-500','text-emerald-800');
+    $('#commonFeedback').innerHTML = `아쉬워요. 정답을 확인해 봐요!<br><span class='text-sm text-gray-600'>${q.explain}</span>`;
+    $('#commonFeedback').className='text-center mt-5 min-h-12 font-black text-rose-600';
+  }
+  setTimeout(()=>{ commonQi++; if(commonQi < commonQuizzes.length) renderCommonQuiz(); else finishCommonQuiz(); }, 1700);
+}
+function finishCommonQuiz(){
+  $('#commonQuizArea').innerHTML = `<div class='text-center py-10'><div class='text-7xl mb-4'>🏆</div><h3 class='text-3xl font-black text-amber-600'>비교 퀴즈 완료!</h3><p class='mt-3 text-gray-700 font-bold'>${commonQuizzes.length}문제 중 ${commonScore}문제를 맞혔어요.</p><p class='mt-2 text-gray-500'>동물의 생김새, 사는 곳, 움직이는 방법을 비교하면 공통점과 차이점을 더 잘 찾을 수 있어요.</p><button onclick='closeModal()' class='mt-6 bg-slate-900 text-white px-6 py-3 rounded-xl font-black'>도감으로 돌아가기</button></div>`;
+}
+
+$('#closeBtn').onclick=closeModal; $('#backBtn').onclick=closeModal; $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+$('#resetBtn').onclick=()=>{if(confirm('도감 등록 기록을 지울까요?')){collected.clear(); save(); renderGrid();}};
+$('#commonQuizBtn').onclick=openCommonQuiz;
+renderGrid();
+</script>
+</body>
+</html>
