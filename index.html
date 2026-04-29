@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>동물 도감 마스터 25 (이미지 안정화)</title>
+<title>동물 도감 마스터 25 + 공통점·차이점 퀴즈</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
@@ -24,12 +24,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f7fafc;color:#1f2937}
       <div class="flex justify-between text-sm font-black mb-2"><span>내 도감 완성도</span><span id="progressText" class="text-emerald-300">0 / 25</span></div>
       <div class="h-3 bg-slate-700 rounded-full overflow-hidden"><div id="progressBar" class="progress-fill h-full bg-emerald-400" style="width:0%"></div></div>
       <button id="resetBtn" class="mt-2 text-xs text-slate-300 underline">등록 기록 지우기</button>
+      <button id="commonQuizBtn" class="hidden mt-3 w-full bg-amber-400 hover:bg-amber-300 text-slate-900 px-4 py-3 rounded-xl font-black shadow">🔍 공통점·차이점 퀴즈 열기</button>
+      <p id="commonQuizHint" class="mt-2 text-xs text-slate-400">도감 15개 이상 등록하면 추가 퀴즈가 열려요.</p>
     </div>
   </div>
 </header>
 <main class="max-w-6xl mx-auto px-4 py-6">
   <section class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-6 text-sm md:text-base">
-    <b>도감 보기 약속</b> · 사진과 설명을 차분히 살펴보고, 여러 동물의 특징, 공통점과 차이점을 찾아봐요. 퀴즈 2개를 맞히면 카드가 도감에 등록됩니다.
+    <b>도감 보기 약속</b> · 사진과 설명을 차분히 살펴보고, 생김새·사는 곳·움직임·환경에 살아가는 방법을 찾아봐요. 퀴즈 2개를 맞히면 카드가 도감에 등록됩니다.
   </section>
   <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4"></div>
 </main>
@@ -47,6 +49,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#f7fafc;color:#1f2937}
       <div id="studyArea" class="space-y-4"></div>
       <div id="quizArea" class="hidden"></div>
       <div id="successArea" class="hidden text-center py-10"><div class="text-7xl mb-4">🎉</div><h3 class="text-3xl font-black text-emerald-600">이미지 획득!</h3><p class="mt-2 text-gray-600 font-bold">도감에 등록되었어요.</p><button id="backBtn" class="mt-6 bg-slate-900 text-white px-6 py-3 rounded-xl font-black">도감으로 돌아가기</button></div>
+      <div id="commonQuizArea" class="hidden"></div>
     </div>
   </div>
 </div>
@@ -58,6 +61,19 @@ const placeholder = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`<s
 const key='animal-dogam-collected-v3';
 let collected = new Set(JSON.parse(localStorage.getItem(key)||'[]'));
 let current=null, qi=0;
+let commonQi=0, commonScore=0;
+const commonQuizzes = [
+  {q:"나비와 꿀벌의 공통점으로 알맞은 것은?", options:["둘 다 날개와 더듬이가 있는 곤충이다","둘 다 바다에서 산다","둘 다 등딱지가 있다"], a:0, explain:"나비와 꿀벌은 모두 곤충이고, 날개와 더듬이가 있어요."},
+  {q:"붕어와 돌고래의 차이점으로 알맞은 것은?", options:["붕어는 아가미로 숨 쉬고, 돌고래는 물 위 공기를 마신다","둘 다 땅속에서 산다","돌고래는 곤충이다"], a:0, explain:"붕어는 물고기라 아가미로 숨 쉬고, 돌고래는 포유동물이라 물 위로 올라와 숨을 쉬어요."},
+  {q:"토끼와 두더지의 공통점은?", options:["네 다리가 있고 털이 있다","지느러미가 있다","몸이 비늘로 덮여 있다"], a:0, explain:"토끼와 두더지는 모두 털이 있고 네 다리로 움직이는 동물이에요."},
+  {q:"달팽이와 바다거북의 공통점으로 가장 알맞은 것은?", options:["몸을 보호하는 단단한 부분이 있다","둘 다 날개가 있다","둘 다 더듬이로 날아간다"], a:0, explain:"달팽이는 껍데기, 바다거북은 등딱지가 몸을 보호해요."},
+  {q:"낙타와 사막여우의 공통점은?", options:["사막 환경에 알맞은 몸의 특징이 있다","북극 얼음 위에서 산다","물속에서 아가미로 숨 쉰다"], a:0, explain:"낙타와 사막여우는 뜨겁고 건조한 사막에서 살아가기 알맞은 특징이 있어요."},
+  {q:"개구리와 수달의 차이점으로 알맞은 것은?", options:["개구리는 물과 땅을 오가고, 수달은 포유동물이다","둘 다 날개로 난다","수달은 곤충이다"], a:0, explain:"개구리는 양서류이고, 수달은 털과 다리가 있는 포유동물이에요."},
+  {q:"꽃게와 사막전갈의 공통점은?", options:["단단한 껍질이나 집게처럼 몸을 보호하거나 먹이를 잡는 구조가 있다","둘 다 깃털이 있다","둘 다 부리로 먹이를 먹는다"], a:0, explain:"꽃게와 사막전갈은 단단한 몸 구조와 집게가 있어요."},
+  {q:"북극곰과 하프물범의 공통점은?", options:["추운 곳에서 살기 알맞은 몸의 특징이 있다","둘 다 사막에서 산다","둘 다 물고기다"], a:0, explain:"북극곰과 하프물범은 추운 환경에서 몸을 보호하는 털이나 지방층 같은 특징이 있어요."},
+  {q:"오징어와 해마의 공통점은?", options:["바다에 산다","넓은 발굽이 있다","땅속 굴을 판다"], a:0, explain:"오징어와 해마는 모두 바다에서 사는 동물이에요."},
+  {q:"뱀과 지렁이의 공통점으로 알맞은 것은?", options:["다리가 없고 기어서 움직인다","둘 다 날개가 있다","둘 다 큰 귀가 있다"], a:0, explain:"뱀과 지렁이는 다리가 없고 몸을 이용해 기어 움직여요."}
+];
 const $=s=>document.querySelector(s);
 
 // 이미지 로딩 로직: 직접 URL → Wikimedia 리다이렉트 → 이미지 프록시 순서로 시도합니다.
@@ -119,7 +135,15 @@ function setSmartImage(img, animal){
 }
 
 function save(){localStorage.setItem(key, JSON.stringify([...collected]));}
-function updateProgress(){$('#progressText').textContent=`${collected.size} / ${animals.length}`; $('#progressBar').style.width=(collected.size/animals.length*100)+'%';}
+function updateProgress(){
+  $('#progressText').textContent=`${collected.size} / ${animals.length}`;
+  $('#progressBar').style.width=(collected.size/animals.length*100)+'%';
+  const unlocked = collected.size >= 15;
+  const btn = $('#commonQuizBtn');
+  const hint = $('#commonQuizHint');
+  if(btn){ btn.classList.toggle('hidden', !unlocked); }
+  if(hint){ hint.textContent = unlocked ? '추가 퀴즈가 열렸어요! 동물들의 공통점과 차이점을 비교해 봐요.' : `도감 ${15-collected.size}개를 더 등록하면 추가 퀴즈가 열려요.`; }
+}
 function renderGrid(){
   const grid=$('#grid'); grid.innerHTML='';
   animals.forEach(a=>{
@@ -133,7 +157,7 @@ function openAnimal(a){current=a; qi=0; $('#modal').classList.remove('hidden'); 
 function closeModal(){$('#modal').classList.add('hidden'); $('#modal').classList.remove('flex'); document.body.style.overflow='auto'; renderGrid();}
 function renderStudy(){
   const got=collected.has(current.id); $('#statusBadge').textContent=got?'도감 등록 완료 🌟':'퀴즈 대기'; $('#statusBadge').className='badge '+(got?'bg-yellow-300 text-yellow-900':'bg-emerald-500 text-white');
-  $('#quizArea').classList.add('hidden'); $('#successArea').classList.add('hidden'); $('#studyArea').classList.remove('hidden');
+  $('#quizArea').classList.add('hidden'); $('#successArea').classList.add('hidden'); $('#commonQuizArea').classList.add('hidden'); $('#studyArea').classList.remove('hidden');
   $('#studyArea').innerHTML=`
   <div class='grid md:grid-cols-2 gap-4'>
     <section class='bg-blue-50 border-l-4 border-blue-400 rounded-2xl p-4'><h4 class='font-black text-blue-800 mb-2'>👁️ 생김새</h4><p class='leading-relaxed'>${current.appearance}</p></section>
@@ -153,8 +177,45 @@ function answer(i,btn){
  else {btn.classList.add('bg-rose-100','border-rose-500','text-rose-700'); $('#feedback').textContent='아쉬워요. 설명을 다시 살펴봐요!'; $('#feedback').className='text-center mt-5 h-7 font-black text-rose-600'; setTimeout(renderStudy,1200);}
 }
 function success(){collected.add(current.id); save(); $('#quizArea').classList.add('hidden'); $('#successArea').classList.remove('hidden'); updateProgress();}
+function openCommonQuiz(){
+  if(collected.size < 15){ alert('도감을 15개 이상 등록하면 열려요!'); return; }
+  commonQi = 0; commonScore = 0;
+  $('#modal').classList.remove('hidden'); $('#modal').classList.add('flex'); document.body.style.overflow='hidden';
+  $('#modalName').textContent='공통점·차이점 퀴즈';
+  $('#modalImg').src = "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='900' height='500'><rect width='100%' height='100%' fill='#fef3c7'/><text x='50%' y='42%' text-anchor='middle' font-size='46' font-family='sans-serif' fill='#92400e'>공통점 · 차이점 퀴즈</text><text x='50%' y='58%' text-anchor='middle' font-size='26' font-family='sans-serif' fill='#78350f'>동물들의 특징을 비교해 봐요</text></svg>`);
+  $('#statusBadge').textContent='추가 퀴즈'; $('#statusBadge').className='badge bg-amber-400 text-amber-950';
+  $('#studyArea').classList.add('hidden'); $('#quizArea').classList.add('hidden'); $('#successArea').classList.add('hidden');
+  $('#commonQuizArea').classList.remove('hidden');
+  renderCommonQuiz();
+}
+function renderCommonQuiz(){
+  const q = commonQuizzes[commonQi];
+  $('#commonQuizArea').innerHTML = `<p class='text-center text-sm font-black text-amber-600'>${commonQi+1} / ${commonQuizzes.length}</p><h3 class='text-2xl font-black text-center my-5 break-keep'>${q.q}</h3><div class='space-y-3'>${q.options.map((o,i)=>`<button class='common-option w-full text-left bg-white border-2 border-slate-200 hover:border-amber-400 rounded-2xl p-4 font-bold' onclick='answerCommon(${i}, this)'><span class='inline-flex w-8 h-8 rounded-full bg-slate-100 items-center justify-center mr-3 font-black'>${i+1}</span>${o}</button>`).join('')}</div><p id='commonFeedback' class='text-center mt-5 min-h-12 font-black'></p><button onclick='closeModal()' class='mt-5 text-sm underline text-gray-500'>도감으로 돌아가기</button>`;
+}
+function answerCommon(i, btn){
+  const q = commonQuizzes[commonQi];
+  document.querySelectorAll('.common-option').forEach(b=>b.disabled=true);
+  if(i === q.a){
+    commonScore++;
+    btn.classList.add('bg-emerald-100','border-emerald-500','text-emerald-800');
+    $('#commonFeedback').innerHTML = `정답이에요! ⭕<br><span class='text-sm text-gray-600'>${q.explain}</span>`;
+    $('#commonFeedback').className='text-center mt-5 min-h-12 font-black text-emerald-600';
+  }else{
+    btn.classList.add('bg-rose-100','border-rose-500','text-rose-700');
+    const buttons = document.querySelectorAll('.common-option');
+    buttons[q.a].classList.add('bg-emerald-100','border-emerald-500','text-emerald-800');
+    $('#commonFeedback').innerHTML = `아쉬워요. 정답을 확인해 봐요!<br><span class='text-sm text-gray-600'>${q.explain}</span>`;
+    $('#commonFeedback').className='text-center mt-5 min-h-12 font-black text-rose-600';
+  }
+  setTimeout(()=>{ commonQi++; if(commonQi < commonQuizzes.length) renderCommonQuiz(); else finishCommonQuiz(); }, 1700);
+}
+function finishCommonQuiz(){
+  $('#commonQuizArea').innerHTML = `<div class='text-center py-10'><div class='text-7xl mb-4'>🏆</div><h3 class='text-3xl font-black text-amber-600'>비교 퀴즈 완료!</h3><p class='mt-3 text-gray-700 font-bold'>${commonQuizzes.length}문제 중 ${commonScore}문제를 맞혔어요.</p><p class='mt-2 text-gray-500'>동물의 생김새, 사는 곳, 움직이는 방법을 비교하면 공통점과 차이점을 더 잘 찾을 수 있어요.</p><button onclick='closeModal()' class='mt-6 bg-slate-900 text-white px-6 py-3 rounded-xl font-black'>도감으로 돌아가기</button></div>`;
+}
+
 $('#closeBtn').onclick=closeModal; $('#backBtn').onclick=closeModal; $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
 $('#resetBtn').onclick=()=>{if(confirm('도감 등록 기록을 지울까요?')){collected.clear(); save(); renderGrid();}};
+$('#commonQuizBtn').onclick=openCommonQuiz;
 renderGrid();
 </script>
 </body>
